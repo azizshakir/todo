@@ -5,7 +5,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	pb"github.com/azizshakir/todo/genproto"
+	pb "github.com/azizshakir/todo/genproto"
 )
 
 type taskRepo struct {
@@ -28,85 +28,72 @@ var (
 )
 func (r *taskRepo) Create(in pb.Task) (pb.Task, error){
 	var id int64
-	err := r.db.QueryRow(querycreate,in.)
-}
-func (r *taskRepo) Get(id int64) (pb.Task, error)
-func (r *taskRepo) List(pb.ListReq) (pb.ListResp,)
-func (r *taskRepo) Update(pb.Task) (pb.Task, error)
-func (r *taskRepo) Delete(int64) error
-func (r *taskRepo) ListOverdue(pb.OverReq) (pb.ListResp,error)
-
-
-
-
-
-
-
-
-
-
-func (r *taskRepo) Create(task pb.Task) (pb.Task, error) {
-	var id int64
-	err := r.db.QueryRow(`
-        INSERT INTO users(first_name, last_name)
-        VALUES ($1,$2) returning id`, task.FirstName, task.LastName).Scan(&id)
+	err := r.db.QueryRow(querycreate,in.Assignee,in.Title,in.Summary,in.Deadline,in.Status).Scan(&id)
 	if err != nil {
-		return pb.Task{}, err
+		return pb.Task{},err
 	}
 
-	task, err = r.Get(id)
+	task,err := r.Get(id)
 	if err != nil {
-		return pb.Task{}, err
+		return pb.Task{},err
 	}
+	
+	return task,nil
+}
+func (r *taskRepo) Get(id int64) (pb.Task, error){
+	var task pb.Task
 
-	return task, nil
+	err := r.db.QueryRow(queryget,id).Scan(
+		&task.Assignee,
+		&task.Title,
+		&task.Summary,
+		&task.Deadline,
+		&task.Status,
+	)
+	if err != nil {
+		return pb.Task{},err
+	}
+	return task,nil
 }
 
-func (r *taskRepo) Get(id int64) (pb.Task, error) {
-	var user pb.Task
-	err := r.db.QueryRow(`
-        SELECT id, first_name, last_name FROM users
-        WHERE id=$1`, id).Scan(&user.Id, &user.FirstName, &user.LastName)
-	if err != nil {
-		return pb.TAsk{}, err
-	}
+func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error){
+	ofset := (in.Page - 1) * in.Limit
 
-	return user, nil
-}
-
-func (r *taskRepo) List(page, limit int64) ([]*pb.Task, int64, error) {
-	offset := (page - 1) * limit
-	rows, err := r.db.Queryx(
-		`SELECT id, first_name, last_name FROM users LIMIT $1 OFFSET $2`,
-		limit, offset)
+	rows, err := r.db.Queryx(querylist,in.Limit,ofset)
 	if err != nil {
-		return nil, 0, err
+		return pb.ListResp{},err
 	}
 	if err = rows.Err(); err != nil {
-		return nil, 0, err
+		return pb.ListResp{},err
 	}
-	defer rows.Close() // nolint:errcheck
-
+	defer rows.Close()
+	
 	var (
-		tasks []*pb.Task
-		task  pb.Task
-		count int64
+		list pb.ListResp
+		task pb.Task
 	)
 	for rows.Next() {
-		err = rows.Scan(&task.Id, &task.FirstName, &task.LastName)
+		err := rows.Scan(
+			&task.Assignee,
+			&task.Title,
+			&task.Summary,
+			&task.Deadline,
+			&task.Status,
+		)
 		if err != nil {
-			return nil, 0, err
+			return pb.ListResp{},err
 		}
-		tasks = append(tasks, &task)
+		list.Tasks = append(list.Tasks, &task)
 	}
-
-	err = r.db.QueryRow(`SELECT count(*) FROM users`).Scan(&count)
+	err = r.db.QueryRow(querycount).Scan(&list.Count)
 	if err != nil {
-		return nil, 0, err
+		return pb.ListResp{},err
 	}
-
-	return tasks, count, nil
+	return list,nil
 }
+func (r *taskRepo) Update(in pb.Task) (pb.Task, error)
+func (r *taskRepo) Delete(id int64) error
+func (r *taskRepo) ListOverdue(pb.OverReq) (pb.ListResp,error)
 
 func (r *taskRepo) Update(task pb.Task) (pb.Task, error) {
 	result, err := r.db.Exec(`UPDATE users SET first_name=$1, last_name=$2 WHERE id=$3`,
