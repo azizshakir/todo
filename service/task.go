@@ -47,20 +47,17 @@ func (s *TaskService) Get(ctx context.Context, req *pb.ByIdReq) (*pb.Task, error
 }
 
 func (s *TaskService) List(ctx context.Context, req *pb.ListReq) (*pb.ListResp, error) {
-	tasks, count, err := s.storage.Task().List(req.Page, req.Limit)
+	list, err := s.storage.Task().List(*req)
 	if err != nil {
 		s.logger.Error("failed to list tasks", l.Error(err))
 		return nil, status.Error(codes.Internal, "failed to list tasks")
 	}
 
-	return &pb.ListResp{
-		Tasks: tasks,
-		Count: count,
-	}, nil
+	return &list, nil
 }
 
-func (s *TaskService) Update(ctx context.Context, req *pb.Task) (*pb.TAsk, error) {
-	task, err := s.storage.TAsk().Update(*req)
+func (s *TaskService) Update(ctx context.Context, req *pb.Task) (*pb.Task, error) {
+	task, err := s.storage.Task().Update(*req)
 	if err != nil {
 		s.logger.Error("failed to update task", l.Error(err))
 		return nil, status.Error(codes.Internal, "failed to update task")
@@ -80,14 +77,11 @@ func (s *TaskService) Delete(ctx context.Context, req *pb.ByIdReq) (*pb.EmptyRes
 }
 
 func (s *TaskService) ListOverdue(ctx context.Context, req *pb.OverReq) (*pb.ListResp, error) {
-	tasks, count, err := s.storage.Task().ListOverdue(req.Time, req.Page, req.Limit)
+	list, err := s.storage.Task().ListOverdue(req.Time, req.Page, req.Limit)
 	if err != nil {
 		s.logger.Error("failed to listOverdue tasks", l.Error(err))
 		return nil, status.Error(codes.Internal, "failed to listOverdue tasks")
 	}
 
-	return &pb.ListResp{
-		Tasks: tasks,
-		Count: count,
-	}, nil
+	return &list,nil
 }

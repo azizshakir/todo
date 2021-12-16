@@ -10,22 +10,22 @@ import (
 
 // IStorage ...
 type IStorage interface {
-	User() repo.UserStorageI
+	Task() repo.TaskStorageI
 }
 
 type storagePg struct {
 	db       *sqlx.DB
-	userRepo repo.UserStorageI
+	taskRepo repo.TaskStorageI
 }
 
 // NewStoragePg ...
 func NewStoragePg(db *sqlx.DB) *storagePg {
 	return &storagePg{
 		db:       db,
-		userRepo: postgres.NewUserRepo(db),
+		taskRepo: postgres.NewTaskRepo(db),
 	}
 }
 
-func (s storagePg) User() repo.UserStorageI {
-	return s.userRepo
+func (s storagePg) Task() repo.TaskStorageI {
+	return s.taskRepo
 }
