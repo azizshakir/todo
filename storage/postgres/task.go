@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"time"
 	"database/sql"
 
 	"github.com/jmoiron/sqlx"
@@ -28,7 +29,13 @@ var (
 )
 func (r *taskRepo) Create(in pb.Task) (pb.Task, error){
 	var id int64
-	err := r.db.QueryRow(querycreate,in.Assignee,in.Title,in.Summary,in.Deadline,in.Status).Scan(&id)
+	err := r.db.QueryRow(
+		querycreate,
+		in.Assignee,
+		in.Title,
+		in.Summary,
+		in.Deadline,
+		in.Status).Scan(&id)
 	if err != nil {
 		return pb.Task{},err
 	}
@@ -44,6 +51,7 @@ func (r *taskRepo) Get(id int64) (pb.Task, error){
 	var task pb.Task
 
 	err := r.db.QueryRow(queryget,id).Scan(
+		&task.Id,
 		&task.Assignee,
 		&task.Title,
 		&task.Summary,
@@ -68,12 +76,11 @@ func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error){
 	}
 	defer rows.Close()
 	
-	var (
-		list pb.ListResp
-		task pb.Task
-	)
+	var list pb.ListResp
 	for rows.Next() {
+		var task pb.Task
 		err := rows.Scan(
+			&task.Id,
 			&task.Assignee,
 			&task.Title,
 			&task.Summary,
@@ -91,31 +98,33 @@ func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error){
 	}
 	return list,nil
 }
-func (r *taskRepo) Update(in pb.Task) (pb.Task, error)
-func (r *taskRepo) Delete(id int64) error
-func (r *taskRepo) ListOverdue(pb.OverReq) (pb.ListResp,error)
-
-func (r *taskRepo) Update(task pb.Task) (pb.Task, error) {
-	result, err := r.db.Exec(`UPDATE users SET first_name=$1, last_name=$2 WHERE id=$3`,
-		task.FirstName, task.LastName, task.Id)
+func (r *taskRepo) Update(in pb.Task) (pb.Task, error){
+	result, err := r.db.Exec(
+		queryupdate,
+		in.Assignee,
+		in.Title,
+		in.Summary,
+		in.Deadline,
+		in.Status,
+		in.Id,
+	)
 	if err != nil {
-		return pb.Task{}, err
+		return pb.Task{},err
 	}
-
 	if i, _ := result.RowsAffected(); i == 0 {
 		return pb.Task{}, sql.ErrNoRows
 	}
 
-	task, err = r.Get(task.Id)
+	task, err := r.Get(in.Id)
 	if err != nil {
 		return pb.Task{}, err
 	}
 
 	return task, nil
-}
 
-func (r *taskRepo) Delete(id int64) error {
-	result, err := r.db.Exec(`DELETE FROM users WHERE id=$1`, id)
+}
+func (r *taskRepo) Delete(id int64) error{
+	result, err := r.db.Exec(querydel, id)
 	if err != nil {
 		return err
 	}
@@ -125,4 +134,36 @@ func (r *taskRepo) Delete(id int64) error {
 	}
 
 	return nil
+}
+
+func (t *taskRepo) ListOverdue(in pb.OverReq) (pb.ListResp, error) {
+	duration, err := time.Parse("2006-01-02", in.Time)
+	if err != nil {
+		return pb.ListResp{}, err
+	}
+
+	rows, err := t.db.Query(querydeadline, duration)
+	if err != nil {
+		return pb.ListResp{}, nil
+	}
+	var list pb.ListResp
+	for rows.Next() {
+		var task pb.Task
+		err = rows.Scan(
+			&task.Id,
+			&task.Assignee,
+			&task.Title,
+			&task.Summary,
+			&task.Deadline,
+			&task.Status)
+		if err != nil {
+			return pb.ListResp{}, nil
+		}
+		list.Tasks = append(list.Tasks, &task)
+	}
+	err = t.db.QueryRow(querydeadlinecount, duration).Scan(&list.Count)
+	if err != nil {
+		return pb.ListResp{}, nil
+	}
+	return list, nil
 }

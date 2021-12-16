@@ -77,7 +77,7 @@ func (s *TaskService) Delete(ctx context.Context, req *pb.ByIdReq) (*pb.EmptyRes
 }
 
 func (s *TaskService) ListOverdue(ctx context.Context, req *pb.OverReq) (*pb.ListResp, error) {
-	list, err := s.storage.Task().ListOverdue(req.Time, req.Page, req.Limit)
+	list, err := s.storage.Task().ListOverdue(*req)
 	if err != nil {
 		s.logger.Error("failed to listOverdue tasks", l.Error(err))
 		return nil, status.Error(codes.Internal, "failed to listOverdue tasks")

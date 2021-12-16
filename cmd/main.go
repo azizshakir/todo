@@ -4,12 +4,13 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/azizshakir/todo/config"
-	"github.com/azizshakir/todo/service"
+	pb "github.com/azizshakir/todo/genproto"
 	"github.com/azizshakir/todo/pkg/db"
 	"github.com/azizshakir/todo/pkg/logger"
-	pb"github.com/azizshakir/todo/genproto"
+	"github.com/azizshakir/todo/service"
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterTaskServiceServer(s, taskService)
+	reflection.Register(s)
 	log.Info("main: server running",
 		logger.String("port", cfg.RPCPort))
 
