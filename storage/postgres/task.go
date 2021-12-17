@@ -18,21 +18,11 @@ func NewTaskRepo(db *sqlx.DB) *taskRepo {
 	return &taskRepo{db: db}
 }
 
-var (
-	querycreate        = `insert into tasks (assignee,title,summary,deadline,status) values ($1,$2,$3,$4,$5) returning id`
-	queryget           = `select id,assignee,title,summary,deadline,status from tasks where id = $1`
-	querylist          = `select id,assignee,title,summary,deadline,status from tasks limit $1 offset $2`
-	querycount         = `select count(*) from tasks`
-	queryupdate        = `update tasks set assignee=$1, title=$2,summary=$3,deadline=$4,status=$5 where id=$6`
-	querydel           = `delete from tasks where id = $1`
-	querydeadline      = `select id,assignee,title,summary,deadline,status from tasks where deadline > $1`
-	querydeadlinecount = `select count(*) from tasks where deadline > $1`
-)
-
 func (r *taskRepo) Create(in pb.Task) (pb.Task, error) {
 	var id int64
 	err := r.db.QueryRow(
-		querycreate,
+		`INSERT INTO tasks (assignee, title, summary, deadline, status) 
+		VALUES ($1,$2,$3,$4,$5) returning id`,
 		in.Assignee,
 		in.Title,
 		in.Summary,
@@ -53,7 +43,8 @@ func (r *taskRepo) Create(in pb.Task) (pb.Task, error) {
 func (r *taskRepo) Get(id int64) (pb.Task, error) {
 	var task pb.Task
 
-	err := r.db.QueryRow(queryget, id).Scan(
+	err := r.db.QueryRow(`SELECT id, assignee, title, summary, deadline, status 
+		FROM tasks WHERE id = $1`, id).Scan(
 		&task.Id,
 		&task.Assignee,
 		&task.Title,
@@ -70,7 +61,8 @@ func (r *taskRepo) Get(id int64) (pb.Task, error) {
 func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error) {
 	ofset := (in.Page - 1) * in.Limit
 
-	rows, err := r.db.Queryx(querylist, in.Limit, ofset)
+	rows, err := r.db.Queryx(`SELECT id, assignee, title, summary, deadline, status 
+	FROM tasks limit $1 offset $2`, in.Limit, ofset)
 	if err != nil {
 		return pb.ListResp{}, err
 	}
@@ -95,7 +87,7 @@ func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error) {
 		}
 		list.Tasks = append(list.Tasks, &task)
 	}
-	err = r.db.QueryRow(querycount).Scan(&list.Count)
+	err = r.db.QueryRow(`SELECT count(*) FROM tasks`).Scan(&list.Count)
 	if err != nil {
 		return pb.ListResp{}, err
 	}
@@ -104,7 +96,7 @@ func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error) {
 
 func (r *taskRepo) Update(in pb.Task) (pb.Task, error) {
 	result, err := r.db.Exec(
-		queryupdate,
+		`UPDATE tasks set assignee=$1, title=$2, summary=$3, deadline=$4, status=$5 WHERE id=$6`,
 		in.Assignee,
 		in.Title,
 		in.Summary,
@@ -128,7 +120,7 @@ func (r *taskRepo) Update(in pb.Task) (pb.Task, error) {
 }
 
 func (r *taskRepo) Delete(id int64) error {
-	result, err := r.db.Exec(querydel, id)
+	result, err := r.db.Exec(`DELETE FROM tasks WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -146,7 +138,7 @@ func (t *taskRepo) ListOverdue(in pb.OverReq) (pb.ListResp, error) {
 		return pb.ListResp{}, err
 	}
 
-	rows, err := t.db.Query(querydeadline, duration)
+	rows, err := t.db.Query(`SELECT id, assignee, title, summary, deadline, status FROM tasks WHERE deadline > $1`, duration)
 	if err != nil {
 		return pb.ListResp{}, nil
 	}
@@ -165,7 +157,7 @@ func (t *taskRepo) ListOverdue(in pb.OverReq) (pb.ListResp, error) {
 		}
 		list.Tasks = append(list.Tasks, &task)
 	}
-	err = t.db.QueryRow(querydeadlinecount, duration).Scan(&list.Count)
+	err = t.db.QueryRow(`SELECT count(*) FROM tasks WHERE deadline > $1`, duration).Scan(&list.Count)
 	if err != nil {
 		return pb.ListResp{}, nil
 	}
