@@ -5,7 +5,6 @@ import (
 
 	"github.com/azizshakir/todo/storage/postgres"
 	"github.com/azizshakir/todo/storage/repo"
-
 )
 
 // IStorage ...

@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	l"github.com/azizshakir/todo/pkg/logger"
-	pb"github.com/azizshakir/todo/genproto"
+	pb "github.com/azizshakir/todo/genproto"
+	l "github.com/azizshakir/todo/pkg/logger"
 	"github.com/azizshakir/todo/storage"
 )
 
@@ -83,5 +83,5 @@ func (s *TaskService) ListOverdue(ctx context.Context, req *pb.OverReq) (*pb.Lis
 		return nil, status.Error(codes.Internal, "failed to listOverdue tasks")
 	}
 
-	return &list,nil
+	return &list, nil
 }

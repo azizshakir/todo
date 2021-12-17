@@ -1,12 +1,12 @@
 package postgres
 
 import (
-	"time"
 	"database/sql"
-
-	"github.com/jmoiron/sqlx"
+	"time"
 
 	pb "github.com/azizshakir/todo/genproto"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type taskRepo struct {
@@ -17,6 +17,7 @@ type taskRepo struct {
 func NewTaskRepo(db *sqlx.DB) *taskRepo {
 	return &taskRepo{db: db}
 }
+
 var (
 	querycreate        = `insert into tasks (assignee,title,summary,deadline,status) values ($1,$2,$3,$4,$5) returning id`
 	queryget           = `select id,assignee,title,summary,deadline,status from tasks where id = $1`
@@ -27,7 +28,8 @@ var (
 	querydeadline      = `select id,assignee,title,summary,deadline,status from tasks where deadline > $1`
 	querydeadlinecount = `select count(*) from tasks where deadline > $1`
 )
-func (r *taskRepo) Create(in pb.Task) (pb.Task, error){
+
+func (r *taskRepo) Create(in pb.Task) (pb.Task, error) {
 	var id int64
 	err := r.db.QueryRow(
 		querycreate,
@@ -37,20 +39,21 @@ func (r *taskRepo) Create(in pb.Task) (pb.Task, error){
 		in.Deadline,
 		in.Status).Scan(&id)
 	if err != nil {
-		return pb.Task{},err
+		return pb.Task{}, err
 	}
 
-	task,err := r.Get(id)
+	task, err := r.Get(id)
 	if err != nil {
-		return pb.Task{},err
+		return pb.Task{}, err
 	}
-	
-	return task,nil
+
+	return task, nil
 }
-func (r *taskRepo) Get(id int64) (pb.Task, error){
+
+func (r *taskRepo) Get(id int64) (pb.Task, error) {
 	var task pb.Task
 
-	err := r.db.QueryRow(queryget,id).Scan(
+	err := r.db.QueryRow(queryget, id).Scan(
 		&task.Id,
 		&task.Assignee,
 		&task.Title,
@@ -59,27 +62,27 @@ func (r *taskRepo) Get(id int64) (pb.Task, error){
 		&task.Status,
 	)
 	if err != nil {
-		return pb.Task{},err
+		return pb.Task{}, err
 	}
-	return task,nil
+	return task, nil
 }
 
-func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error){
+func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error) {
 	ofset := (in.Page - 1) * in.Limit
 
-	rows, err := r.db.Queryx(querylist,in.Limit,ofset)
+	rows, err := r.db.Queryx(querylist, in.Limit, ofset)
 	if err != nil {
-		return pb.ListResp{},err
+		return pb.ListResp{}, err
 	}
 	if err = rows.Err(); err != nil {
-		return pb.ListResp{},err
+		return pb.ListResp{}, err
 	}
 	defer rows.Close()
-	
+
 	var list pb.ListResp
 	for rows.Next() {
 		var task pb.Task
-		err := rows.Scan(
+		err = rows.Scan(
 			&task.Id,
 			&task.Assignee,
 			&task.Title,
@@ -88,17 +91,18 @@ func (r *taskRepo) List(in pb.ListReq) (pb.ListResp, error){
 			&task.Status,
 		)
 		if err != nil {
-			return pb.ListResp{},err
+			return pb.ListResp{}, err
 		}
 		list.Tasks = append(list.Tasks, &task)
 	}
 	err = r.db.QueryRow(querycount).Scan(&list.Count)
 	if err != nil {
-		return pb.ListResp{},err
+		return pb.ListResp{}, err
 	}
-	return list,nil
+	return list, nil
 }
-func (r *taskRepo) Update(in pb.Task) (pb.Task, error){
+
+func (r *taskRepo) Update(in pb.Task) (pb.Task, error) {
 	result, err := r.db.Exec(
 		queryupdate,
 		in.Assignee,
@@ -109,7 +113,7 @@ func (r *taskRepo) Update(in pb.Task) (pb.Task, error){
 		in.Id,
 	)
 	if err != nil {
-		return pb.Task{},err
+		return pb.Task{}, err
 	}
 	if i, _ := result.RowsAffected(); i == 0 {
 		return pb.Task{}, sql.ErrNoRows
@@ -121,9 +125,9 @@ func (r *taskRepo) Update(in pb.Task) (pb.Task, error){
 	}
 
 	return task, nil
-
 }
-func (r *taskRepo) Delete(id int64) error{
+
+func (r *taskRepo) Delete(id int64) error {
 	result, err := r.db.Exec(querydel, id)
 	if err != nil {
 		return err
