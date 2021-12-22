@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS tasks(
-    id SERIAL Primary Key,
+    id uuid Primary Key,
     assignee VARCHAR(64),
     title VARCHAR(64),
     summary VARCHAR(128),

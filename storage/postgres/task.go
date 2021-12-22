@@ -19,10 +19,11 @@ func NewTaskRepo(db *sqlx.DB) *taskRepo {
 }
 
 func (r *taskRepo) Create(in pb.Task) (pb.Task, error) {
-	var id int64
+	var id string
 	err := r.db.QueryRow(
-		`INSERT INTO tasks (assignee, title, summary, deadline, status) 
-		VALUES ($1,$2,$3,$4,$5) returning id`,
+		`INSERT INTO tasks (id,assignee, title, summary, deadline, status) 
+		VALUES ($1,$2,$3,$4,$5,$6) returning id`,
+		in.Id,
 		in.Assignee,
 		in.Title,
 		in.Summary,
@@ -40,7 +41,7 @@ func (r *taskRepo) Create(in pb.Task) (pb.Task, error) {
 	return task, nil
 }
 
-func (r *taskRepo) Get(id int64) (pb.Task, error) {
+func (r *taskRepo) Get(id string) (pb.Task, error) {
 	var task pb.Task
 
 	err := r.db.QueryRow(`SELECT id, assignee, title, summary, deadline, status 
@@ -119,7 +120,7 @@ func (r *taskRepo) Update(in pb.Task) (pb.Task, error) {
 	return task, nil
 }
 
-func (r *taskRepo) Delete(id int64) error {
+func (r *taskRepo) Delete(id string) error {
 	result, err := r.db.Exec(`DELETE FROM tasks WHERE id = $1`, id)
 	if err != nil {
 		return err

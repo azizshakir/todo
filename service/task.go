@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-
+	"github.com/gofrs/uuid"
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,6 +27,13 @@ func NewTaskService(db *sqlx.DB, log l.Logger) *TaskService {
 }
 
 func (s *TaskService) Create(ctx context.Context, req *pb.Task) (*pb.Task, error) {
+	id, err := uuid.NewV4()
+
+	if err != nil {
+		s.logger.Error("failed to create uuid", l.Error(err))
+		return &pb.Task{},err
+	}
+	req.Id = id.String()
 	task, err := s.storage.Task().Create(*req)
 	if err != nil {
 		s.logger.Error("failed to create task", l.Error(err))
